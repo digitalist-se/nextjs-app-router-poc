@@ -1,21 +1,14 @@
+import { formatDate, formatNumber } from "@repo/utils";
 import Link from "next/link";
+import { Endpoints } from "@octokit/types";
+import { PageProps } from "@/.next/types/app/page";
 
-function formatDate(date) {
-  return new Date(date).toLocaleDateString("fi-FI", {});
-}
-
-export function formatNumber(number) {
-  if (!number) return undefined;
-  return number.toLocaleString("fi-FI", {
-    maximumFractionDigits: 0,
-  });
-}
-
-export default async function Repo({ params }) {
-  const res = await fetch(
+export default async function Repo({ params }: PageProps) {
+  type Response = Endpoints["GET /repos/{owner}/{repo}"]["response"]["data"];
+  const res: Response = await fetch(
     `https://api.github.com/repos/${params.slug.join("/")}`
   ).then((res) => res.json());
-  console.log(res);
+
   return (
     <>
       <div className="mt-6 border-t border-gray-100">
@@ -48,20 +41,22 @@ export default async function Repo({ params }) {
             <dt className="text-sm font-medium leading-6 text-gray-900">
               Topics
             </dt>
-            <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">
-              <ul className="flex flex-wrap gap-2">
-                {res.topics.map((topic) => (
-                  <li key={topic}>
-                    <Link
-                      href={`/topic/${topic}`}
-                      className="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10"
-                    >
-                      {topic}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </dd>
+            {res.topics ? (
+              <dd className="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">
+                <ul className="flex flex-wrap gap-2">
+                  {res.topics.map((topic) => (
+                    <li key={topic}>
+                      <Link
+                        href={`/topic/${topic}`}
+                        className="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10"
+                      >
+                        {topic}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </dd>
+            ) : null}
           </div>
           <div className="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
             <dt className="text-sm font-medium leading-6 text-gray-900">

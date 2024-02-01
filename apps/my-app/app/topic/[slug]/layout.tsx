@@ -1,6 +1,7 @@
+import { LayoutProps } from "@/.next/types/app/layout";
 import { Suspense } from "react";
 
-export default function Layout({ params, children }) {
+export default function Layout({ params, children }: LayoutProps) {
   return (
     <div>
       <h1 className="inline-block text-3xl font-bold mb-8">
