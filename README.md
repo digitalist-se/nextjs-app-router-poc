@@ -1,58 +1,109 @@
-# Turborepo Tailwind CSS starter
+# App router example
 
-This is an official starter Turborepo.
+## Prerequisites
 
-## Using this example
+- [`pnpm`](https://pnpm.io/)
+  - Since v16.13, Node.js is shipping Corepack for managing package managers. This is an experimental feature, so you need to enable it by running: `corepack enable pnpm`
 
-Run the following command:
+## Setup
 
-```sh
-npx create-turbo@latest -e with-tailwind
+- Run turbo application `apps/web` in dev by running following command at the root of the project
+
+```
+pnpm dev
 ```
 
-## What's inside?
+- Run turbo application in production mode by running
 
-This Turborepo includes the following packages/apps:
+```
+pnpm build && cd apps/web/
+```
 
-### Apps and Packages
+## App router
 
-- `docs`: a [Next.js](https://nextjs.org/) app with [Tailwind CSS](https://tailwindcss.com/)
-- `web`: another [Next.js](https://nextjs.org/) app with [Tailwind CSS](https://tailwindcss.com/)
-- `ui`: a stub React component library with [Tailwind CSS](https://tailwindcss.com/) shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+- App router is a evolution of the existing file-system based router in the Pages Router
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+### `page.tsx`
 
-### Building packages/ui
+- A page is UI that is unique to a route
+- Pages are Server Components by default but can be set to a Client Component with `'use client';` directive.
 
-This example is set up to produce compiled styles for `ui` components into the `dist` directory. The component `.tsx` files are consumed by the Next.js apps directly using `transpilePackages` in `next.config.js`. This was chosen for several reasons:
+### `layout.tsx`
 
-- Make sharing one `tailwind.config.js` to apps and packages as easy as possible.
-- Make package compilation simple by only depending on the Next.js Compiler and `tailwindcss`.
-- Ensure Tailwind classes do not overwrite each other. The `ui` package uses a `ui-` prefix for it's classes.
-- Maintain clear package export boundaries.
+- On navigation, layouts preserve state, remain interactive, and do not re-render
+- Layouts can be cached and reused to avoid unnecessary computation when navigating between pages
+- Root layout is required and it needs to contain `<html>` and `<body>`
+- Layouts can also be nested
 
-Another option is to consume `packages/ui` directly from source without building. If using this option, you will need to update the `tailwind.config.js` in your apps to be aware of your package locations, so it can find all usages of the `tailwindcss` class names for CSS compilation.
+### `template.tsx`
 
-For example, in [tailwind.config.js](packages/tailwind-config/tailwind.config.js):
+- Same as `layout.tsx` but they are re-rendered on navigation
+- This means that when a user navigates between routes that share a template, a new instance of the component is mounted, **DOM elements are recreated**, **state is not preserved**, and effects are re-synchronized.
+- Good for eg. logging page views
+
+### [Rest of the special files](https://nextjs.org/docs/app/building-your-application/routing#file-conventions)
+
+## Example of static versus dynamic rendering
+
+### Static rendering
+
+- Start app in dev `pnpm dev`
+- Create an app router route component eg. `/app/date/page.tsx`
+- Add `Date.now()` to returned JSX
+- Build and start the application in production mode
+- The new route with current timestamp has been statically rendered
+
+### Dynamic rendering
+
+- Add `import { unstable_noStore as noStore } from "next/cache";`
+- Add `noStore()` to the body of the the newly created app router component
+- Build and start the application in production mode
+- The new route is now dynamically rendered
+
+## Github Topic explorer
+
+### Demo dynamic rendering
+
+- Comment out `generateStaticParams` and `dynamicParams` from topic route component (`app/topic/[slug]/page.tsx`) to test dynamic rendering
+
+### Demo suspense boundary
+
+- Change the `fallback` prop value in the topic layout component (`app/topic/[slug]/layout.tsx`)
+
+### Demo static rendering
+
+- Test different values for `generateStaticParams` and `dynamicParams` in the topic route component (`app/topic/[slug]/page.tsx`) to test static rendering
+- Build and start the application in production mode
+- Check the `.next/server/app/topic` to see which pages got statically rendered
+- Set `dynamicParams` to `true` and `false` and see behaviour of accessing an unknown route (not present in the array returned by the `generateStaticParams`) changes based on the value
+
+### Demo ISR like behaviour (incremental static regeneration)
+
+- Comment out the `noStore()` function in the `RecentlyUpdated` component found in `app/topic/[slug]/page.tsx`
+- Add `revalidate` next options in fetch
 
 ```js
-  content: [
-    // app content
-    `src/**/*.{js,ts,jsx,tsx}`,
-    // include packages if not transpiling
-    "../../packages/ui/*.{js,ts,jsx,tsx}",
-  ],
+...
+const recentlyUpdated = (await fetch(
+  `https://api.github.com/search/repositories?q=${slug}&sort=updated&page=1&per_page=1`,
+  {
+    next: {
+      revalidate: 30,
+    },
+  }
+).then((response) => response.json())) as Response;
+...
 ```
 
-If you choose this strategy, you can remove the `tailwindcss` and `autoprefixer` dependencies from the `ui` package.
+- Build and run the application
+- See how the most recent repository stays the same for 30 seconds until it is allowed to be revalidated and generated
 
-### Utilities
+### Partial pre rendering
 
-This Turborepo has some additional tools already setup for you:
+- Read more about partial prerendering - [Partial Prerendering](https://nextjs.org/learn/dashboard-app/partial-prerendering)
+- Still experimental
 
-- [Tailwind CSS](https://tailwindcss.com/) for styles
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
+### Server actions
+
+- Read more about server actions - [Server Actions and Mutations](https://nextjs.org/docs/app/building-your-application/data-fetching/server-actions-and-mutations)
+- Take note on how to revalidate data that has been mutated by the server action - [Revalidating data](https://nextjs.org/docs/app/building-your-application/data-fetching/server-actions-and-mutations#revalidating-data)
